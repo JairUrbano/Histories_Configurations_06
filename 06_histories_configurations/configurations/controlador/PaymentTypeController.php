@@ -29,7 +29,6 @@ class PaymentTypeController extends Controller
         $this->middleware('can:payment-types.destroy')->only('destroy');
         $this->middleware('can:payment-types.index')->only('index');
         $this->middleware('can:payment-types.show')->only('show');
-        
     }
 
     /**
