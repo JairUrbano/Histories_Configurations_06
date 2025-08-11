@@ -27,7 +27,7 @@ class DocumentType(models.Model):
     class Meta:
         db_table = "document_types"
 
-
+#PACIENTE
 class Patient(models.Model):
     name = models.CharField(max_length=255)
     document_type = models.ForeignKey(DocumentType, on_delete=models.SET_NULL, null=True, blank=True)
@@ -43,7 +43,7 @@ class Patient(models.Model):
     class Meta:
         db_table = "patients"
 
-
+#HISTORIA
 class History(models.Model):
     testimony = models.TextField(blank=True, null=True)
     private_observation = models.TextField(blank=True, null=True)
@@ -75,7 +75,7 @@ class History(models.Model):
     class Meta:
         db_table = "histories"
 
-
+#PAYMENT
 class PaymentType(models.Model):
     code = models.CharField(max_length=50)
     name = models.CharField(max_length=255)
@@ -98,7 +98,7 @@ class PaymentType(models.Model):
     class Meta:
         db_table = "payment_types"
 
-
+#PREDETERMINED
 class PredeterminedPrice(models.Model):
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -112,7 +112,7 @@ class PredeterminedPrice(models.Model):
     class Meta:
         db_table = "predetermined_prices"
 
-
+#APPOINTMENT
 class Appointment(models.Model):
     payment_type = models.ForeignKey(PaymentType, related_name="appointments", on_delete=models.CASCADE)
     predetermined_price = models.ForeignKey(PredeterminedPrice, related_name="appointments", on_delete=models.CASCADE, blank=True, null=True)
@@ -125,3 +125,8 @@ class Appointment(models.Model):
 
     class Meta:
         db_table = "appointments"
+
+
+
+
+

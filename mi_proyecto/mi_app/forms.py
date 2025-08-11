@@ -1,151 +1,145 @@
-from django.db import models
-from django.utils import timezone
+from django.shortcuts import render
+from django import forms
+from .models import (
+    DocumentType,
+    Patient,
+    History,
+    PaymentType,
+    PredeterminedPrice,
+    Appointment,
+)
 
-# Modelo para el tipo de documento
-class DocumentType(models.Model):
-    name = models.CharField(max_length=255)  # Nombre del tipo de documento
-    description = models.TextField(blank=True, null=True)  # Descripción adicional
+# FORMULARIOS PARA LOS MODELOS
 
-    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
-    updated_at = models.DateTimeField(auto_now=True)      # Fecha de última actualización
-    deleted_at = models.DateTimeField(blank=True, null=True)  # Fecha de borrado lógico
-
-    # Método para realizar borrado lógico (no elimina el registro de la BD, solo marca la fecha de borrado)
-    def soft_delete(self):
-        self.deleted_at = timezone.now()
-        self.save()
-
-    # Método para restaurar el registro (quita la marca de borrado)
-    def restore(self):
-        self.deleted_at = None
-        self.save()
-
-    # Cómo se muestra el objeto como string
-    def _str_(self):
-        return self.name
-
-    # Indica el nombre de la tabla en la base de datos
+# Formulario para crear/editar tipos de documento
+class DocumentTypeForm(forms.ModelForm):
     class Meta:
-        db_table = "document_types"
+        model = DocumentType
+        fields = ['name', 'description']
 
-# Modelo para los pacientes
-class Patient(models.Model):
-    name = models.CharField(max_length=255)  # Nombre del paciente
-    document_type = models.ForeignKey(
-        DocumentType,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )  # Relación con tipo de documento (puede quedar en null si se elimina el tipo de documento)
-    document_number = models.CharField(max_length=50, blank=True, null=True)  # Número de documento
-    birth_date = models.DateField(blank=True, null=True)  # Fecha de nacimiento
+    # Validación personalizada para el campo 'name'
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        # Verifica si existe otro tipo con el mismo nombre
+        qs = DocumentType.objects.filter(name=name)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('El tipo de documento ya está registrado.')
+        # Valida longitud máxima
+        if name and len(name) > 255:
+            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
+        return name
 
-    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
-    updated_at = models.DateTimeField(auto_now=True)      # Fecha de última actualización
+    # Validación para la descripción
+    def clean_description(self):
+        description = self.cleaned_data.get('description')
+        if description and len(description) > 1000:
+            raise forms.ValidationError('La descripción no debe superar los 1000 caracteres.')
+        return description
 
-    def _str_(self):
-        return self.name
-
+# Formulario para tipos de pago
+class PaymentTypeForm(forms.ModelForm):
     class Meta:
-        db_table = "patients"
+        model = PaymentType
+        fields = ['code', 'name']
 
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        qs = PaymentType.objects.filter(name=name)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('El tipo de pago ya está registrado.')
+        if name and len(name) > 255:
+            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
+        return name
 
-# Modelo para la historia clínica de un paciente
-class History(models.Model):
-    testimony = models.TextField(blank=True, null=True)  # Testimonio del paciente
-    private_observation = models.TextField(blank=True, null=True)  # Observaciones privadas
-    observation = models.TextField(blank=True, null=True)  # Observaciones generales
-    height = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # Altura en metros
-    weight = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # Peso actual
-    last_weight = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)  # Último peso registrado
-    menstruation = models.BooleanField(default=False)  # Si la paciente tiene menstruación
-    diu_type = models.CharField(max_length=255, blank=True, null=True)  # Tipo de DIU
-    gestation = models.BooleanField(default=False)  # Si la paciente está en gestación
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if code and len(code) > 50:
+            raise forms.ValidationError('El código no debe superar los 50 caracteres.')
+        return code
 
-    patient = models.ForeignKey(
-        Patient,
-        related_name="histories",
-        on_delete=models.CASCADE
-    )  # Relación con el paciente (si se elimina el paciente, se eliminan sus historias)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(blank=True, null=True)  # Borrado lógico
-
-    def soft_delete(self):
-        self.deleted_at = timezone.now()
-        self.save()
-
-    def restore(self):
-        self.deleted_at = None
-        self.save()
-
-    def _str_(self):
-        return f"History for patient {self.patient_id}"
-
+# Formulario para precios predeterminados
+class PredeterminedPriceForm(forms.ModelForm):
     class Meta:
-        db_table = "histories"
+        model = PredeterminedPrice
+        fields = ['name', 'price']
 
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        qs = PredeterminedPrice.objects.filter(name=name)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('El precio predeterminado ya está registrado.')
+        if name and len(name) > 255:
+            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
+        return name
 
-# Modelo de tipos de pago
-class PaymentType(models.Model):
-    code = models.CharField(max_length=50)  # Código interno del tipo de pago
-    name = models.CharField(max_length=255) # Nombre del tipo de pago
+    def clean_price(self):
+        price = self.cleaned_data.get('price')
+        # Valida que el precio no sea negativo
+        if price is not None and price < 0:
+            raise forms.ValidationError('El precio no puede ser negativo.')
+        return price
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted_at = models.DateTimeField(blank=True, null=True)  # Borrado lógico
-
-    def soft_delete(self):
-        self.deleted_at = timezone.now()
-        self.save()
-
-    def restore(self):
-        self.deleted_at = None
-        self.save()
-
-    def _str_(self):
-        return self.name
-
+# Formulario para pacientes
+class PatientForm(forms.ModelForm):
     class Meta:
-        db_table = "payment_types"
+        model = Patient
+        fields = ['name', 'document_type', 'document_number', 'birth_date']
 
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if name and len(name) > 255:
+            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
+        return name
 
-# Modelo para precios predeterminados
-class PredeterminedPrice(models.Model):
-    name = models.CharField(max_length=255)  # Nombre del precio predeterminado
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Valor del precio
+    def clean_document_number(self):
+        document_number = self.cleaned_data.get('document_number')
+        if document_number and len(document_number) > 50:
+            raise forms.ValidationError('El número de documento no debe superar los 50 caracteres.')
+        return document_number
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def _str_(self):
-        return f"{self.name} - {self.price}"
-
+# Formulario para historias clínicas
+class HistoryForm(forms.ModelForm):
     class Meta:
-        db_table = "predetermined_prices"
+        model = History
+        fields = [
+            'testimony', 'private_observation', 'observation',
+            'height', 'weight', 'last_weight',
+            'menstruation', 'diu_type', 'gestation', 'patient'
+        ]
 
+    def clean_diu_type(self):
+        diu_type = self.cleaned_data.get('diu_type')
+        if diu_type and len(diu_type) > 255:
+            raise forms.ValidationError('El tipo de DIU no debe superar los 255 caracteres.')
+        return diu_type
 
-# Modelo para las citas médicas
-class Appointment(models.Model):
-    payment_type = models.ForeignKey(
-        PaymentType,
-        related_name="appointments",
-        on_delete=models.CASCADE
-    )  # Relación con tipo de pago
-    predetermined_price = models.ForeignKey(
-        PredeterminedPrice,
-        related_name="appointments",
-        on_delete=models.CASCADE,
-        blank=True,
-        null=True
-    )  # Relación con precio predeterminado
-
-    date = models.DateTimeField()  # Fecha y hora de la cita
-    description = models.TextField(blank=True, null=True)  # Descripción de la cita
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
+# Formulario para citas
+class AppointmentForm(forms.ModelForm):
     class Meta:
-        db_table = "appointments"
+        model = Appointment
+        fields = [
+            'payment_type',
+            'predetermined_price',
+            'date',
+            'description'
+        ]
+
+    def clean_description(self):
+        description = self.cleaned_data.get('description')
+        if description and len(description) > 1000:
+            raise forms.ValidationError('La descripción no debe superar los 1000 caracteres.')
+        return description
+
+    def clean_date(self):
+        date = self.cleaned_data.get('date')
+        # Para evitar fechas pasadas:
+        # from django.utils import timezone
+        # if date and date < timezone.now():
+        #     raise forms.ValidationError('La fecha no puede estar en el pasado.')
+        return date

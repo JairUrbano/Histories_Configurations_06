@@ -1,146 +1,200 @@
-from django.shortcuts import render
-
-from django import forms
+from django.shortcuts import render, get_object_or_404, redirect
 from .models import (
-    DocumentType,
-    Patient,
-    History,
-    PaymentType,
-    PredeterminedPrice,
-    Appointment,
+    DocumentType, Patient, History,
+    PaymentType, PredeterminedPrice, Appointment
+)
+from .forms import (
+    DocumentTypeForm, PatientForm, HistoryForm,
+    PaymentTypeForm, PredeterminedPriceForm, AppointmentForm
 )
 
-# FORMULARIOS PARA LOS MODELOS
+# ============ DOCUMENT TYPE ============
+def document_types_list(request):
+    document_types = DocumentType.objects.filter(deleted_at__isnull=True)
+    return render(request, 'document_types/list.html', {'document_types': document_types})
 
-# Formulario para crear/editar tipos de documento
-class DocumentTypeForm(forms.ModelForm):
-    class Meta:
-        model = DocumentType
-        fields = ['name', 'description']
+def document_type_create(request):
+    if request.method == 'POST':
+        form = DocumentTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('document_types_list')
+    else:
+        form = DocumentTypeForm()
+    return render(request, 'document_types/form.html', {'form': form})
 
-    # Validación personalizada para el campo 'name'
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        # Verifica si existe otro tipo con el mismo nombre
-        qs = DocumentType.objects.filter(name=name)
-        if self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise forms.ValidationError('El tipo de documento ya está registrado.')
-        # Valida longitud máxima
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
-        return name
+def document_type_update(request, pk):
+    document_type = get_object_or_404(DocumentType, pk=pk)
+    if request.method == 'POST':
+        form = DocumentTypeForm(request.POST, instance=document_type)
+        if form.is_valid():
+            form.save()
+            return redirect('document_types_list')
+    else:
+        form = DocumentTypeForm(instance=document_type)
+    return render(request, 'document_types/form.html', {'form': form})
 
-    # Validación para la descripción
-    def clean_description(self):
-        description = self.cleaned_data.get('description')
-        if description and len(description) > 1000:
-            raise forms.ValidationError('La descripción no debe superar los 1000 caracteres.')
-        return description
+def document_type_delete(request, pk):
+    document_type = get_object_or_404(DocumentType, pk=pk)
+    document_type.soft_delete()
+    return redirect('document_types_list')
 
-# Formulario para tipos de pago
-class PaymentTypeForm(forms.ModelForm):
-    class Meta:
-        model = PaymentType
-        fields = ['code', 'name']
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        qs = PaymentType.objects.filter(name=name)
-        if self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise forms.ValidationError('El tipo de pago ya está registrado.')
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
-        return name
+# ============ PATIENT ============
+def patients_list(request):
+    patients = Patient.objects.all()
+    return render(request, 'patients/list.html', {'patients': patients})
 
-    def clean_code(self):
-        code = self.cleaned_data.get('code')
-        if code and len(code) > 50:
-            raise forms.ValidationError('El código no debe superar los 50 caracteres.')
-        return code
+def patient_create(request):
+    if request.method == 'POST':
+        form = PatientForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('patients_list')
+    else:
+        form = PatientForm()
+    return render(request, 'patients/form.html', {'form': form})
 
-# Formulario para precios predeterminados
-class PredeterminedPriceForm(forms.ModelForm):
-    class Meta:
-        model = PredeterminedPrice
-        fields = ['name', 'price']
+def patient_update(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    if request.method == 'POST':
+        form = PatientForm(request.POST, instance=patient)
+        if form.is_valid():
+            form.save()
+            return redirect('patients_list')
+    else:
+        form = PatientForm(instance=patient)
+    return render(request, 'patients/form.html', {'form': form})
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        qs = PredeterminedPrice.objects.filter(name=name)
-        if self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise forms.ValidationError('El precio predeterminado ya está registrado.')
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
-        return name
+def patient_delete(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    patient.delete()
+    return redirect('patients_list')
 
-    def clean_price(self):
-        price = self.cleaned_data.get('price')
-        # Valida que el precio no sea negativo
-        if price is not None and price < 0:
-            raise forms.ValidationError('El precio no puede ser negativo.')
-        return price
 
-# Formulario para pacientes
-class PatientForm(forms.ModelForm):
-    class Meta:
-        model = Patient
-        fields = ['name', 'document_type', 'document_number', 'birth_date']
+# ============ HISTORY ============
+def histories_list(request):
+    histories = History.objects.filter(deleted_at__isnull=True)
+    return render(request, 'histories/list.html', {'histories': histories})
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
-        return name
+def history_create(request):
+    if request.method == 'POST':
+        form = HistoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('histories_list')
+    else:
+        form = HistoryForm()
+    return render(request, 'histories/form.html', {'form': form})
 
-    def clean_document_number(self):
-        document_number = self.cleaned_data.get('document_number')
-        if document_number and len(document_number) > 50:
-            raise forms.ValidationError('El número de documento no debe superar los 50 caracteres.')
-        return document_number
+def history_update(request, pk):
+    history = get_object_or_404(History, pk=pk)
+    if request.method == 'POST':
+        form = HistoryForm(request.POST, instance=history)
+        if form.is_valid():
+            form.save()
+            return redirect('histories_list')
+    else:
+        form = HistoryForm(instance=history)
+    return render(request, 'histories/form.html', {'form': form})
 
-# Formulario para historias clínicas
-class HistoryForm(forms.ModelForm):
-    class Meta:
-        model = History
-        fields = [
-            'testimony', 'private_observation', 'observation',
-            'height', 'weight', 'last_weight',
-            'menstruation', 'diu_type', 'gestation', 'patient'
-        ]
+def history_delete(request, pk):
+    history = get_object_or_404(History, pk=pk)
+    history.soft_delete()
+    return redirect('histories_list')
 
-    def clean_diu_type(self):
-        diu_type = self.cleaned_data.get('diu_type')
-        if diu_type and len(diu_type) > 255:
-            raise forms.ValidationError('El tipo de DIU no debe superar los 255 caracteres.')
-        return diu_type
 
-# Formulario para citas
-class AppointmentForm(forms.ModelForm):
-    class Meta:
-        model = Appointment
-        fields = [
-            'payment_type',
-            'predetermined_price',
-            'date',
-            'description'
-        ]
+# ============ PAYMENT TYPE ============
+def payment_types_list(request):
+    payment_types = PaymentType.objects.filter(deleted_at__isnull=True)
+    return render(request, 'payment_types/list.html', {'payment_types': payment_types})
 
-    def clean_description(self):
-        description = self.cleaned_data.get('description')
-        if description and len(description) > 1000:
-            raise forms.ValidationError('La descripción no debe superar los 1000 caracteres.')
-        return description
+def payment_type_create(request):
+    if request.method == 'POST':
+        form = PaymentTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('payment_types_list')
+    else:
+        form = PaymentTypeForm()
+    return render(request, 'payment_types/form.html', {'form': form})
 
-    def clean_date(self):
-        date = self.cleaned_data.get('date')
-        # Para evitar fechas pasadas:
-        # from django.utils import timezone
-        # if date and date < timezone.now():
-        #     raise forms.ValidationError('La fecha no puede estar en el pasado.')
-        return date
+def payment_type_update(request, pk):
+    payment_type = get_object_or_404(PaymentType, pk=pk)
+    if request.method == 'POST':
+        form = PaymentTypeForm(request.POST, instance=payment_type)
+        if form.is_valid():
+            form.save()
+            return redirect('payment_types_list')
+    else:
+        form = PaymentTypeForm(instance=payment_type)
+    return render(request, 'payment_types/form.html', {'form': form})
+
+def payment_type_delete(request, pk):
+    payment_type = get_object_or_404(PaymentType, pk=pk)
+    payment_type.soft_delete()
+    return redirect('payment_types_list')
+
+
+# ============ PREDETERMINED PRICE ============
+def predetermined_prices_list(request):
+    prices = PredeterminedPrice.objects.all()
+    return render(request, 'predetermined_prices/list.html', {'prices': prices})
+
+def predetermined_price_create(request):
+    if request.method == 'POST':
+        form = PredeterminedPriceForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('predetermined_prices_list')
+    else:
+        form = PredeterminedPriceForm()
+    return render(request, 'predetermined_prices/form.html', {'form': form})
+
+def predetermined_price_update(request, pk):
+    price = get_object_or_404(PredeterminedPrice, pk=pk)
+    if request.method == 'POST':
+        form = PredeterminedPriceForm(request.POST, instance=price)
+        if form.is_valid():
+            form.save()
+            return redirect('predetermined_prices_list')
+    else:
+        form = PredeterminedPriceForm(instance=price)
+    return render(request, 'predetermined_prices/form.html', {'form': form})
+
+def predetermined_price_delete(request, pk):
+    price = get_object_or_404(PredeterminedPrice, pk=pk)
+    price.delete()
+    return redirect('predetermined_prices_list')
+
+
+# ============ APPOINTMENT ============
+def appointments_list(request):
+    appointments = Appointment.objects.all()
+    return render(request, 'appointments/list.html', {'appointments': appointments})
+
+def appointment_create(request):
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('appointments_list')
+    else:
+        form = AppointmentForm()
+    return render(request, 'appointments/form.html', {'form': form})
+
+def appointment_update(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST, instance=appointment)
+        if form.is_valid():
+            form.save()
+            return redirect('appointments_list')
+    else:
+        form = AppointmentForm(instance=appointment)
+    return render(request, 'appointments/form.html', {'form': form})
+
+def appointment_delete(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+    appointment.delete()
+    return redirect('appointments_list')
