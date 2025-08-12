@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django import forms
 from .models import (
     DocumentType,
@@ -13,6 +12,17 @@ from .models import (
 
 # Formulario para crear/editar tipos de documento
 class DocumentTypeForm(forms.ModelForm):
+    name = forms.CharField(
+        max_length=255,
+        error_messages={'max_length': 'El nombre no debe superar los 255 caracteres.'}
+    )
+    description = forms.CharField(
+        required=False,
+        widget=forms.Textarea,
+        max_length=1000,
+        error_messages={'max_length': 'La descripción no debe superar los 1000 caracteres.'}
+    )
+
     class Meta:
         model = DocumentType
         fields = ['name', 'description']
@@ -20,26 +30,24 @@ class DocumentTypeForm(forms.ModelForm):
     # Validación personalizada para el campo 'name'
     def clean_name(self):
         name = self.cleaned_data.get('name')
-        # Verifica si existe otro tipo con el mismo nombre
         qs = DocumentType.objects.filter(name=name)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise forms.ValidationError('El tipo de documento ya está registrado.')
-        # Valida longitud máxima
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
         return name
-
-    # Validación para la descripción
-    def clean_description(self):
-        description = self.cleaned_data.get('description')
-        if description and len(description) > 1000:
-            raise forms.ValidationError('La descripción no debe superar los 1000 caracteres.')
-        return description
 
 # Formulario para tipos de pago
 class PaymentTypeForm(forms.ModelForm):
+    name = forms.CharField(
+        max_length=255,
+        error_messages={'max_length': 'El nombre no debe superar los 255 caracteres.'}
+    )
+    code = forms.CharField(
+        max_length=50,
+        error_messages={'max_length': 'El código no debe superar los 50 caracteres.'}
+    )
+
     class Meta:
         model = PaymentType
         fields = ['code', 'name']
@@ -51,18 +59,15 @@ class PaymentTypeForm(forms.ModelForm):
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise forms.ValidationError('El tipo de pago ya está registrado.')
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
         return name
-
-    def clean_code(self):
-        code = self.cleaned_data.get('code')
-        if code and len(code) > 50:
-            raise forms.ValidationError('El código no debe superar los 50 caracteres.')
-        return code
 
 # Formulario para precios predeterminados
 class PredeterminedPriceForm(forms.ModelForm):
+    name = forms.CharField(
+        max_length=255,
+        error_messages={'max_length': 'El nombre no debe superar los 255 caracteres.'}
+    )
+
     class Meta:
         model = PredeterminedPrice
         fields = ['name', 'price']
@@ -74,37 +79,38 @@ class PredeterminedPriceForm(forms.ModelForm):
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise forms.ValidationError('El precio predeterminado ya está registrado.')
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
         return name
 
     def clean_price(self):
         price = self.cleaned_data.get('price')
-        # Valida que el precio no sea negativo
         if price is not None and price < 0:
             raise forms.ValidationError('El precio no puede ser negativo.')
         return price
 
 # Formulario para pacientes
 class PatientForm(forms.ModelForm):
+    name = forms.CharField(
+        max_length=255,
+        error_messages={'max_length': 'El nombre no debe superar los 255 caracteres.'}
+    )
+    document_number = forms.CharField(
+        required=False,
+        max_length=50,
+        error_messages={'max_length': 'El número de documento no debe superar los 50 caracteres.'}
+    )
+
     class Meta:
         model = Patient
         fields = ['name', 'document_type', 'document_number', 'birth_date']
 
-    def clean_name(self):
-        name = self.cleaned_data.get('name')
-        if name and len(name) > 255:
-            raise forms.ValidationError('El nombre no debe superar los 255 caracteres.')
-        return name
-
-    def clean_document_number(self):
-        document_number = self.cleaned_data.get('document_number')
-        if document_number and len(document_number) > 50:
-            raise forms.ValidationError('El número de documento no debe superar los 50 caracteres.')
-        return document_number
-
 # Formulario para historias clínicas
 class HistoryForm(forms.ModelForm):
+    diu_type = forms.CharField(
+        required=False,
+        max_length=255,
+        error_messages={'max_length': 'El tipo de DIU no debe superar los 255 caracteres.'}
+    )
+
     class Meta:
         model = History
         fields = [
@@ -113,14 +119,15 @@ class HistoryForm(forms.ModelForm):
             'menstruation', 'diu_type', 'gestation', 'patient'
         ]
 
-    def clean_diu_type(self):
-        diu_type = self.cleaned_data.get('diu_type')
-        if diu_type and len(diu_type) > 255:
-            raise forms.ValidationError('El tipo de DIU no debe superar los 255 caracteres.')
-        return diu_type
-
 # Formulario para citas
 class AppointmentForm(forms.ModelForm):
+    description = forms.CharField(
+        required=False,
+        widget=forms.Textarea,
+        max_length=1000,
+        error_messages={'max_length': 'La descripción no debe superar los 1000 caracteres.'}
+    )
+
     class Meta:
         model = Appointment
         fields = [
@@ -130,15 +137,9 @@ class AppointmentForm(forms.ModelForm):
             'description'
         ]
 
-    def clean_description(self):
-        description = self.cleaned_data.get('description')
-        if description and len(description) > 1000:
-            raise forms.ValidationError('La descripción no debe superar los 1000 caracteres.')
-        return description
-
     def clean_date(self):
         date = self.cleaned_data.get('date')
-        # Para evitar fechas pasadas:
+        # Si quieres evitar fechas pasadas, descomenta:
         # from django.utils import timezone
         # if date and date < timezone.now():
         #     raise forms.ValidationError('La fecha no puede estar en el pasado.')
