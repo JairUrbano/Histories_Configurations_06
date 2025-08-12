@@ -1,8 +1,8 @@
-jsjname: ci
+name: ci
 
 on:
   push:
-    branches: [ main, 'feature/*', fronted ]
+    branches: [ main, 'feature/*', frontend ]
   pull_request:
     branches: [ main ]
 
@@ -36,4 +36,4 @@ jobs:
       - name: Ejecutar tests con reporte detallado (en venv)
         run: |
           source venv/bin/activate
-          python manage.py test --verbosity=2s
+          python manage.py test --verbosity=2
