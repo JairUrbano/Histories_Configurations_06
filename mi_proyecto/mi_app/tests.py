@@ -71,12 +71,10 @@ class DocumentTypeFormTest(TestCase):
         form = DocumentTypeForm(data={'name': 'DNI', 'description': 'Otro'})
         self.assertFalse(form.is_valid())
         self.assertIn('El tipo de documento ya está registrado.', form.errors['name'])
-
+ 
+    #MODIFICACION
     def test_name_length_limit(self):
-        form = DocumentTypeForm(data={
-            'name': 'x' * 256,  # Más de 255 caracteres
-            'description': 'Desc'
-        })
+        form = DocumentTypeForm(data={'name': 'a' * 256})
         self.assertFalse(form.is_valid())
         self.assertIn('El nombre no debe superar los 255 caracteres.', form.errors['name'])
 
@@ -93,7 +91,7 @@ class PatientFormTest(TestCase):
         })
         self.assertTrue(form.is_valid())
 
-    def test_name_length_limit(self):
+    def test_name_length_limit(self):             
         form = PatientForm(data={
             'name': 'x' * 256,
             'document_type': self.doc_type.id,
@@ -193,7 +191,7 @@ class ViewsTest(TestCase):
             date="2025-12-31 10:00:00"
         )
 
-    def test_document_types_list_view(self):
+    def test_document_types_list_view(self):            
         response = self.client.get(reverse('document_types_list'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'document_types/list.html')
@@ -207,7 +205,7 @@ class ViewsTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(DocumentType.objects.filter(name='Carnet Ext').exists())
 
-    def test_patients_list_view(self):
+    def test_patients_list_view(self):           
         response = self.client.get(reverse('patients_list'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'patients/list.html')
